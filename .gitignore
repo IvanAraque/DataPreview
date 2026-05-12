@@ -1,0 +1,63 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- Build / Distribución ----
+# IMPORTANTE: anclados con "/" inicial para que solo afecten a la raíz del repo
+# y NO a carpetas con esos nombres dentro de src/ (p. ej. nunca habrá src/build/
+# pero por si acaso).
+/build/
+/dist/
+*.spec
+*.exe
+*.app
+
+# ---- Material de desarrollo personal (NO publicar) ----
+# Notas, prompts y agentes que usas en local pero no van al repo público.
+.agent/
+PROMPT_INICIAL.md
+PROMPT_*.md
+NOTAS*.md
+TODO*.md
+DEV*.md
+
+# ---- Scripts de prueba y datos de prueba ----
+scratch_*.py
+test.csv
+test_large.csv
+*.tmp
+/tmp/
+
+# ---- Settings / Logs locales ----
+*.log
+settings.local.json
+.env
+.env.*
+
+# ---- Datos del usuario (CSVs/outputs en la raíz, NO toca src/data/) ----
+# Anclados con "/" para que git NO interprete que src/data/ también encaja.
+/data/
+/outputs/
+*.parquet

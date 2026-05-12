@@ -1,0 +1,19 @@
+# --- Núcleo de la app ---
+PySide6>=6.6.0          # GUI (Qt6) y QtWebEngine para los gráficos interactivos
+polars>=0.20.0          # Lectura y análisis de datos a alta velocidad
+pandas>=2.0.0           # Conversión a DataFrame de pandas para Plotly
+numpy>=1.24.0           # Backend numérico de los gráficos
+
+# --- Visualización ---
+pyqtgraph>=0.13.0       # Gráficos rápidos para la pestaña Preview
+plotly>=5.18.0          # Gráficos interactivos para la pestaña Custom
+
+# --- Iconos ---
+qtawesome>=1.3.1        # FontAwesome para los iconos de la UI
+
+# --- Lectores de formato ---
+openpyxl>=3.1.0         # Soporte de Excel (.xlsx)
+pyarrow>=15.0.0         # Soporte de Parquet
+
+# --- Empaquetado (opcional, solo si vas a generar el .exe) ---
+pyinstaller>=6.3.0
