@@ -9,14 +9,14 @@ Aplicación de escritorio en Python (PySide6) para hacer análisis exploratorio 
 - **Limpieza**: detección automática de problemas (nulos altos, outliers IQR, cardinalidad anómala) combinada con recomendaciones de IA cuando está disponible (tipos incorrectos, formatos heterogéneos, sentinelas, categorías casi duplicadas).
 - **Preview**: hasta 6 gráficos recomendados con descripción y observaciones generadas por la IA. Selector de tipo + variables X/Y por panel. Alternativas swappables con un click. Scroll vertical, tamaño configurable.
 - **Custom**: constructor manual con Plotly (Scatter, Línea, Barras, Histograma, Boxplot, Heatmap de correlación). Render asíncrono con loading state, análisis de la IA para cada gráfico generado.
-- **Asistente IA**: chat conversacional sobre el dataset (markdown con jerarquía visual). Reporte inicial automático tras cargar los datos.
+- **Asistente IA**: chat conversacional sobre el dataset, con respuestas formateadas. Reporte inicial automático tras cargar los datos.
 
 Todo lo de IA es **opcional**. Sin Ollama corriendo, la app sigue funcionando con heurísticas y simplemente oculta la pestaña Asistente IA.
 
 ## Instalación rápida
 
 ```bash
-git clone https://github.com/TU_USUARIO/DataPreview.git
+git clone https://github.com/IvanAraque/DataPreview.git
 cd DataPreview
 python -m venv .venv
 .venv\Scripts\activate          # Windows
@@ -35,7 +35,7 @@ Guía paso a paso, incluyendo cómo cambiar de modelo o generar un `.exe`: [`doc
 
 ## Arquitectura
 
-Si quieres entender cómo está estructurado el código (flujo de carga, integración con Ollama, threading, diseño defensivo): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Si quieres entender cómo está estructurado el código (flujo de carga, integración con Ollama, threading, manejo de errores): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 Historial de versiones: [`docs/VERSION.md`](docs/VERSION.md).
 
