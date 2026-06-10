@@ -11,8 +11,7 @@ class AITab(QWidget):
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
         self.layout.setSpacing(15)
-        
-        # Header
+
         header_layout = QHBoxLayout()
         self.title = QLabel("Asistente IA")
         self.title.setStyleSheet("font-size: 20px; font-weight: bold;")
@@ -22,8 +21,7 @@ class AITab(QWidget):
         self.status_label.setStyleSheet("color: #6B7280;")
         header_layout.addWidget(self.status_label, alignment=Qt.AlignRight)
         self.layout.addLayout(header_layout)
-        
-        # Chat / Report Area
+
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
         self.chat_display.setStyleSheet("""
@@ -64,8 +62,7 @@ class AITab(QWidget):
         """)
 
         self.layout.addWidget(self.chat_display, 1)
-        
-        # Input Area
+
         self.input_layout = QHBoxLayout()
         
         self.input_field = QLineEdit()
@@ -94,9 +91,9 @@ class AITab(QWidget):
     def set_status(self, text: str, is_error: bool = False):
         self.status_label.setText(text)
         if is_error:
-            self.status_label.setStyleSheet("color: #EF4444;") # Red
+            self.status_label.setStyleSheet("color: #EF4444;")
         else:
-            self.status_label.setStyleSheet("color: #10B981;") # Green
+            self.status_label.setStyleSheet("color: #10B981;")
 
     def append_chunk(self, chunk: str):
         # Acumulamos siempre, pero el repintado va por timer.
@@ -126,7 +123,7 @@ class AITab(QWidget):
         self.set_status("Generando respuesta...")
 
     def set_error(self, error_msg: str):
-        self._current_content += f"\n\n> ❌ **Error:** {error_msg}\n\n"
+        self._current_content += f"\n\n> **Error:** {error_msg}\n\n"
         self.flush()
         self.set_status("Error", True)
 

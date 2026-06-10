@@ -13,6 +13,7 @@ from ui.preview_tab import PreviewTab
 from ui.cleaning_tab import CleaningTab
 from ui.advanced_tab import AdvancedTab
 from ui.ai_tab import AITab
+from ui.report_dialog import ReportDialog, _widget_to_base64_png
 from data.ai_analyzer import AIAnalyzer
 
 class SettingsDialog(QDialog):
@@ -192,7 +193,7 @@ class HomeView(QWidget):
         if self.main_file:
             base = os.path.basename(self.main_file)
             text = (
-                "<div style='font-size:15px;'><b>✅ Dataset:</b> " + base + "</div>"
+                "<div style='font-size:15px;'><b>Dataset:</b> " + base + "</div>"
                 "<div style='font-size:11px; margin-top:6px;'>Haz clic o arrastra otro archivo para reemplazarlo.</div>"
             )
         else:
@@ -261,7 +262,7 @@ class MainWindow(QMainWindow):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
         
-        # Backend integration (Init before UI)
+        # Backend (inicializar antes que la UI)
         self.data_manager = DataLoaderManager()
         self.data_manager.progress_updated.connect(self._update_progress, Qt.QueuedConnection)
         self.data_manager.dataset_loaded.connect(self._on_dataset_loaded, Qt.QueuedConnection)
@@ -287,24 +288,27 @@ class MainWindow(QMainWindow):
             # Recomendaciones de limpieza por IA
             self.ai_analyzer.cleaning_recommendations_ready.connect(self._on_ai_cleaning_ready, Qt.QueuedConnection)
             self.ai_analyzer.cleaning_recommendations_error.connect(self._on_ai_cleaning_error, Qt.QueuedConnection)
+            # Prosa del informe
+            self.ai_analyzer.report_sections_ready.connect(self._on_ai_report_ready, Qt.QueuedConnection)
+            self.ai_analyzer.report_sections_error.connect(self._on_ai_report_error, Qt.QueuedConnection)
+
+        # Referencia al diálogo del informe abierto (si lo hay)
+        self._report_dialog = None
         
         self._setup_topbar()
-        
-        # Main Body (Sidebar + Content)
+
         self.body_widget = QWidget()
         self.body_layout = QHBoxLayout(self.body_widget)
         self.body_layout.setContentsMargins(0, 0, 0, 0)
         self.body_layout.setSpacing(0)
         
         self._setup_sidebar()
-        
-        # Content Area Stack
+
         self.content_stack = QStackedWidget()
         self.body_layout.addWidget(self.content_stack, 1)
         
         self.main_layout.addWidget(self.body_widget, 1)
 
-        # Views inside the stack
         self.home_view = HomeView(ai_available=self.ai_available)
         self.home_view.file_dropped.connect(self._on_file_dropped)
         self.content_stack.addWidget(self.home_view)
@@ -312,7 +316,7 @@ class MainWindow(QMainWindow):
         self._setup_progress_ui()
         self._setup_tabs()
 
-        # Initially hide sidebar
+        # Ocultar el sidebar al inicio
         self.sidebar_container.hide()
 
     def _setup_topbar(self):
@@ -322,22 +326,30 @@ class MainWindow(QMainWindow):
         
         top_layout = QHBoxLayout(self.topbar)
         top_layout.setContentsMargins(20, 0, 20, 0)
-        
-        # Title
+
         title_lbl = QLabel(f"<b>{tr('app_title')}</b>")
         title_lbl.setStyleSheet("font-size: 16px;")
         top_layout.addWidget(title_lbl)
         
         top_layout.addSpacing(20)
-        
-        # File info
+
         self.file_label = QLabel("")
         self.file_label.setStyleSheet("color: #6B7280;")
         top_layout.addWidget(self.file_label)
         
         top_layout.addStretch()
-        
-        # Action Buttons
+
+        self.report_btn = QPushButton(qta.icon('fa5s.file-alt', color='#4F46E5'), "Generar informe")
+        self.report_btn.setObjectName("iconBtn")
+        self.report_btn.setToolTip(
+            "Genera un informe completo del dataset en HTML (con tus gráficos "
+            "actuales y, si la IA está disponible, prosa de análisis)."
+        )
+        self.report_btn.setCursor(Qt.PointingHandCursor)
+        self.report_btn.hide()
+        self.report_btn.clicked.connect(self._on_generate_report_clicked)
+        top_layout.addWidget(self.report_btn)
+
         self.close_file_btn = QPushButton(qta.icon('fa5s.times-circle', color='#6B7280'), "Cerrar archivo")
         self.close_file_btn.setObjectName("iconBtn")
         self.close_file_btn.hide()
@@ -386,7 +398,7 @@ class MainWindow(QMainWindow):
         self.body_layout.addWidget(self.sidebar_container)
 
     def _setup_tabs(self):
-        # We store the tabs in a QStackedWidget managed by the sidebar
+        # Las pestañas viven en un QStackedWidget controlado por el sidebar
         self.tabs_stack = QStackedWidget()
 
         self.preview_tab = PreviewTab()
@@ -456,14 +468,14 @@ class MainWindow(QMainWindow):
         self.progress_label.setText(f"Cargando... {int(percentage)}% (Est: {time_str})")
 
     def _on_dataset_loaded(self, df):
-        # We don't switch tabs yet. We keep the progress bar visible.
+        # Aún no cambiamos de pestaña: mantenemos la barra de progreso visible
         self.progress_bar.setValue(50)
         self.progress_label.setText("Analizando perfil del dataset...")
         
-        # Save df reference to update tabs later
+        # Guardar referencia al df para actualizar las pestañas después
         self._current_df = df
         
-        # Start profiling in background
+        # Perfilar en background
         self.profiler_manager.run_profile(df)
         
     def _on_profile_ready(self, profile: dict, recs: list):
@@ -682,6 +694,139 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+    # ------------------------------------------------------------------
+    # Generación del informe (memoria de análisis)
+    # ------------------------------------------------------------------
+
+    def _on_generate_report_clicked(self):
+        """Reúne el contexto actual de la app y abre el ReportDialog."""
+        if not hasattr(self, "_pending_profile"):
+            return
+
+        # Capturar gráficos del PreviewTab
+        chart_blocks = []
+        try:
+            for panel in self.preview_tab._main_panels:
+                if panel is None:
+                    continue
+                spec = panel.current_spec()
+                b64 = _widget_to_base64_png(panel.chart_container)
+                description = ""
+                observations = ""
+                try:
+                    description = panel.description_label.text() or ""
+                    observations = panel.observations_label.text() or ""
+                except Exception:
+                    pass
+                title_c = self._spec_title(spec)
+                chart_blocks.append({
+                    "title": title_c,
+                    "image_b64": b64,
+                    "description": description,
+                    "observations": observations,
+                    "spec": spec,
+                })
+        except Exception:
+            import traceback
+            traceback.print_exc()
+
+        # Recopilar muestras para el prompt de IA
+        samples = {}
+        try:
+            for c in self._pending_profile.get("columns", []):
+                samples[c.get("name")] = c.get("samples", []) or []
+        except Exception:
+            pass
+
+        # Recoger las recomendaciones de limpieza (heurísticas + IA)
+        cleaning_recs = list(getattr(self.cleaning_tab, "_heuristic_recs", []) or [])
+        cleaning_recs += list(getattr(self.cleaning_tab, "_ai_recs", []) or [])
+
+        # Nombre del dataset
+        import os
+        dataset_name = ""
+        if hasattr(self, "file_label"):
+            dataset_name = self.file_label.text() or ""
+        if not dataset_name:
+            dataset_name = "dataset"
+
+        # Si ya había un diálogo abierto, lo cerramos para no duplicarlo
+        if self._report_dialog is not None:
+            try:
+                self._report_dialog.close()
+            except Exception:
+                pass
+            self._report_dialog = None
+
+        self._report_dialog = ReportDialog(
+            dataset_name=dataset_name,
+            profile=self._pending_profile,
+            samples=samples,
+            chart_blocks=chart_blocks,
+            cleaning_recs=cleaning_recs,
+            ai_available=self.ai_available,
+            context_text=self._read_context_text(),
+            parent=self,
+        )
+        # Cuando el dialog pida la IA, llamamos a generate_report
+        self._report_dialog.request_ai_sections.connect(self._on_report_ai_requested)
+        self._report_dialog.show()
+        self._report_dialog.raise_()
+        self._report_dialog.activateWindow()
+
+    @staticmethod
+    def _spec_title(spec: dict) -> str:
+        ctype = spec.get("type", "?")
+        x = spec.get("x", "?")
+        y = spec.get("y") if spec.get("y") not in (None, "count", "frequency") else None
+        label_map = {"hist": "Distribución", "bar": "Frecuencia",
+                     "scatter": "Relación", "line": "Evolución"}
+        base = label_map.get(ctype, ctype)
+        if y:
+            return f"{base}: {x} vs {y}"
+        return f"{base}: {x}"
+
+    def _on_report_ai_requested(self, payload: dict):
+        """El ReportDialog pidió la prosa de IA."""
+        if not self.ai_available:
+            return
+        try:
+            self.ai_analyzer.generate_report(
+                profile=payload.get("profile"),
+                samples=payload.get("samples"),
+                context_text=payload.get("context_text", ""),
+                chart_summaries=payload.get("chart_summaries", []),
+                cleaning_summary=payload.get("cleaning_summary", []),
+                dataset_name=payload.get("dataset_name", ""),
+            )
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            try:
+                self._report_dialog.apply_ai_error("Excepción al pedir la IA.")
+            except Exception:
+                pass
+
+    def _on_ai_report_ready(self, sections: dict):
+        if self._report_dialog is not None:
+            try:
+                self._report_dialog.apply_ai_sections(sections)
+            except RuntimeError:
+                # diálogo cerrado mientras tanto
+                pass
+            except Exception:
+                import traceback
+                traceback.print_exc()
+
+    def _on_ai_report_error(self, error_msg: str):
+        if self._report_dialog is not None:
+            try:
+                self._report_dialog.apply_ai_error(error_msg)
+            except RuntimeError:
+                pass
+            except Exception:
+                pass
+
     def _on_chart_explanation_error(self, request_id: str, error_msg: str):
         routes = getattr(self, "_explain_routes", {}) or {}
         if request_id and request_id in routes:
@@ -716,6 +861,7 @@ class MainWindow(QMainWindow):
         self.content_stack.setCurrentWidget(self.tabs_stack)
         self.sidebar_container.show()
         self.close_file_btn.show()
+        self.report_btn.show()
         self.sidebar_list.setCurrentRow(0)
 
         # Lanzar la IA después del cambio para no añadir más carga al hilo principal
@@ -754,9 +900,10 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, tr("error"), error_msg)
         
     def _on_close_file(self):
-        # Reset view
+        # Reiniciar la vista
         self.sidebar_container.hide()
         self.close_file_btn.hide()
+        self.report_btn.hide()
         self.file_label.setText("")
         self.home_view.reset()
-        self.content_stack.setCurrentWidget(self.home_view)
+        se

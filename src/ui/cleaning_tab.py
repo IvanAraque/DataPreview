@@ -12,7 +12,7 @@ class SortableTreeItem(QTreeWidgetItem):
         if column == 1:
             sev_map = {"Alta": 3, "Media": 2, "Baja": 1, "": 0}
             return sev_map.get(self.text(1), 0) < sev_map.get(other.text(1), 0)
-        # Compare text directly to avoid PySide6 infinite recursion bug with super().__lt__
+        # Comparar texto directamente para evitar el bug de recursión infinita de PySide6 con super().__lt__
         return self.text(column) < other.text(column)
 
 
@@ -71,7 +71,7 @@ class CleaningTab(QWidget):
             self.ai_status_lbl.setStyleSheet("color: #4F46E5; font-size: 12px; margin-left: 10px;")
         else:
             if self._ai_recs:
-                self.ai_status_lbl.setText("✓ Análisis IA incluido")
+                self.ai_status_lbl.setText("Análisis IA incluido")
                 self.ai_status_lbl.setStyleSheet("color: #10B981; font-size: 12px; margin-left: 10px;")
             else:
                 self.ai_status_lbl.setText("")
@@ -153,7 +153,7 @@ class CleaningTab(QWidget):
                     f = child.font(0)
                     f.setItalic(True)
                     child.setFont(0, f)
-                    child.setForeground(0, child.foreground(0))  # palette default
+                    child.setForeground(0, child.foreground(0))
 
                 col_item.addChild(child)
 

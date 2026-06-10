@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFont
 
-# Global Fonts and Metrics
+# Fuentes y métricas globales
 FONT_FAMILY = "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
 COMMON_STYLE = """
@@ -348,7 +348,7 @@ QComboBox::down-arrow {
 """
 
 def apply_theme(app: QApplication, theme_name: str) -> None:
-    # Attempt to set default font
+    # Intentar fijar la fuente por defecto
     font = QFont("Inter")
     if not font.exactMatch():
         font = QFont("Segoe UI")

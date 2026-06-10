@@ -10,7 +10,7 @@ from ui.theme import apply_theme
 from settings.config import settings
 
 def main():
-    # Disable GPU and sandbox for WebEngine to ensure maximum stability on Windows
+    # Desactiva GPU y sandbox de WebEngine para máxima estabilidad en Windows
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --no-sandbox"
     
     app = QApplication(sys.argv)

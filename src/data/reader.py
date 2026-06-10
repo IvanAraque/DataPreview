@@ -4,14 +4,14 @@ import time
 from typing import Callable, Optional
 
 def _estimate_total_lines(file_path: str) -> int:
-    """Estimates the total number of lines in a file by sampling the first 1MB."""
+    """Estima el número total de líneas muestreando el primer 1MB del archivo."""
     total_bytes = os.path.getsize(file_path)
     if total_bytes == 0:
         return 1
         
     try:
         with open(file_path, 'rb') as f:
-            head = f.read(1024 * 1024) # Read up to 1MB
+            head = f.read(1024 * 1024) # leer hasta 1MB
             lines = head.count(b'\n')
             if lines == 0:
                 return 1
@@ -26,7 +26,7 @@ def read_dataset(
     check_cancel: Optional[Callable[[], bool]] = None
 ) -> pl.DataFrame:
     """
-    Reads a dataset and reports progress.
+    Lee un dataset e informa del progreso.
     progress_callback(percentage: float, time_estimate_str: str)
     """
     ext = os.path.splitext(file_path)[1].lower()
@@ -39,7 +39,7 @@ def read_dataset(
             reader = pl.read_csv_batched(file_path, ignore_errors=True)
             batches = reader.next_batches(50)
         except Exception:
-            # Fallback for small or problematic CSVs
+            # Fallback para CSVs pequeños o problemáticos
             if progress_callback:
                 progress_callback(100.0, "0s")
             return pl.read_csv(file_path, ignore_errors=True)
@@ -70,7 +70,6 @@ def read_dataset(
             batches = reader.next_batches(50)
             
         if chunks:
-            # Concat all chunks
             df = pl.concat(chunks)
         else:
             df = pl.DataFrame()
@@ -81,8 +80,7 @@ def read_dataset(
         return df
         
     elif ext == ".xlsx":
-        # Polars can read excel, but it might not support chunking well.
-        # We just report 0 then 100.
+        # Polars lee excel pero no soporta bien el chunking: reportamos 0 y luego 100
         if progress_callback:
             progress_callback(50.0, "...")
         df = pl.read_excel(file_path)

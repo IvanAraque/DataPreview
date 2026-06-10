@@ -1,14 +1,20 @@
 # Historial de versiones
 
-Cada release relevante se documenta aquí. Formato:
-
-## [versión] - YYYY-MM-DD
-### Añadido
-### Cambiado
-### Contexto
-Una línea explicando POR QUÉ se hizo el cambio.
+Changelog de DataPreview. (Lo más reciente arriba).
 
 ---
+
+## [0.2] - 2026-06-10
+
+### Añadido
+
+#### Generación de informe
+- Botón **Generar informe** que compila el análisis del dataset (resumen de contexto, problemas de limpieza detectados y gráficos con sus observaciones) en un documento.
+- Opción de **descargar como HTML** standalone, visualizable en cualquier navegador sin necesidad de tener la app.
+
+### Contexto
+Hasta ahora todo el análisis vivía dentro de la app; con el informe el resultado del EDA se puede guardar y compartir fuera de DataPreview.
+
 
 ## [0.1] - 2026-05-12
 

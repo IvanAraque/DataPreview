@@ -10,9 +10,7 @@ def select_charts(df: pl.DataFrame, max_charts: int = 6) -> List[Dict[str, Any]]
     date_cols = []
     num_cols = []
     cat_cols = []
-    
-    # Avoid scanning whole columns for n_unique if huge, but we need it.
-    # We can use approx_n_unique if available, or just n_unique.
+
     for col in df.columns:
         dtype = df[col].dtype
         if dtype in pl.NUMERIC_DTYPES:
@@ -27,7 +25,7 @@ def select_charts(df: pl.DataFrame, max_charts: int = 6) -> List[Dict[str, Any]]
             except Exception:
                 pass
                 
-    # Strategy: generate a mix priorizando lo analítico
+    # Estrategia: mezcla priorizando lo analítico
     # 1. Líneas date vs cada numérica (evolución temporal)
     if date_cols:
         for num in num_cols:

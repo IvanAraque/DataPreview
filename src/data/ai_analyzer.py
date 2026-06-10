@@ -16,6 +16,9 @@ class AIAnalyzer(QObject):
     # Recomendaciones de limpieza generadas por la IA
     cleaning_recommendations_ready = Signal(list)
     cleaning_recommendations_error = Signal(str)
+    # Generación del informe completo (memoria de análisis)
+    report_sections_ready = Signal(dict)
+    report_sections_error = Signal(str)
 
     def __init__(self, model="phi3"): # Default to phi3 or llama3
         super().__init__()
@@ -25,6 +28,7 @@ class AIAnalyzer(QObject):
         self._chart_thread = None
         self._explain_thread = None
         self._cleaning_thread = None
+        self._report_thread = None
         self._messages = []
         
     def check_connection(self) -> bool:
@@ -320,6 +324,177 @@ class AIAnalyzer(QObject):
             "}]}\n"
             "Reglas: usa SOLO nombres EXACTOS de la lista. No inventes valores que no esten. "
             "Si no hay problemas claros, devuelve {\"recommendations\":[]}."
+        )
+
+    # ------------------------------------------------------------------
+    # Generación del INFORME completo (memoria de análisis)
+    # ------------------------------------------------------------------
+
+    def generate_report(self, profile: dict, samples: dict = None,
+                        context_text: str = "", chart_summaries: list = None,
+                        cleaning_summary: list = None, dataset_name: str = ""):
+        """
+        Pide a la IA la prosa del informe en un único call. Devuelve por la
+        señal report_sections_ready(dict) un diccionario con: title_suggestion,
+        abstract, introduction, intro_eda, cleaning_section y conclusions.
+        Todas escritas en primera persona del plural, sin tono robótico ni
+        listas con bullets.
+        """
+        t = threading.Thread(
+            target=self._run_report_generation,
+            args=(
+                profile or {},
+                samples or {},
+                context_text or "",
+                chart_summaries or [],
+                cleaning_summary or [],
+                dataset_name or "",
+            ),
+            daemon=True,
+        )
+        self._report_thread = t
+        t.start()
+
+    def _run_report_generation(self, profile, samples, context_text,
+                               chart_summaries, cleaning_summary, dataset_name):
+        try:
+            prompt = self._build_report_prompt(
+                profile, samples, context_text,
+                chart_summaries, cleaning_summary, dataset_name,
+            )
+            data = {
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "format": "json",
+            }
+            req = urllib.request.Request(
+                self.url,
+                data=json.dumps(data).encode("utf-8"),
+                method="POST",
+            )
+            req.add_header("Content-Type", "application/json")
+            with urllib.request.urlopen(req, timeout=900) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+
+            content = payload.get("message", {}).get("content", "")
+            parsed = json.loads(content) if content else {}
+            if not isinstance(parsed, dict):
+                self.report_sections_error.emit("Respuesta IA no es un objeto JSON.")
+                return
+
+            # Normalizar campos esperados
+            out = {
+                "title_suggestion": str(parsed.get("title_suggestion", "")).strip(),
+                "abstract": str(parsed.get("abstract", "")).strip(),
+                "introduction": str(parsed.get("introduction", "")).strip(),
+                "intro_eda": str(parsed.get("intro_eda", "")).strip(),
+                "cleaning_section": str(parsed.get("cleaning_section", "")).strip(),
+                "conclusions": str(parsed.get("conclusions", "")).strip(),
+            }
+            self.report_sections_ready.emit(out)
+        except Exception as e:
+            self.report_sections_error.emit(str(e))
+
+    def _build_report_prompt(self, profile, samples, context_text,
+                             chart_summaries, cleaning_summary, dataset_name):
+        cols_lines = []
+        for col in profile.get("columns", []):
+            name = col.get("name")
+            line = (
+                f"- {name}: tipo {col.get('type')}, nulos {col.get('nulls')}, "
+                f"unicos {col.get('unique', '?')}, min {col.get('min', '?')}, "
+                f"max {col.get('max', '?')}"
+            )
+            sv = samples.get(name) if isinstance(samples, dict) else None
+            if sv:
+                preview = ", ".join(str(v)[:30] for v in sv[:5])
+                line += f", ejemplos: [{preview}]"
+            cols_lines.append(line)
+        cols_block = "\n".join(cols_lines) if cols_lines else "(sin columnas)"
+
+        chart_lines = []
+        for i, c in enumerate(chart_summaries or [], start=1):
+            t = c.get("type", "?")
+            x = c.get("x", "")
+            y = c.get("y", "")
+            desc = c.get("description", "")
+            obs = c.get("observations", "")
+            chart_lines.append(
+                f"{i}. [{t}] X={x}" + (f", Y={y}" if y and y not in ("count", "frequency") else "")
+                + (f"\n   Descripcion: {desc}" if desc else "")
+                + (f"\n   Observaciones: {obs}" if obs else "")
+            )
+        charts_block = "\n".join(chart_lines) if chart_lines else "(sin graficos disponibles)"
+
+        cleaning_lines = []
+        for r in (cleaning_summary or [])[:30]:
+            cleaning_lines.append(
+                f"- [{r.get('severidad', '?')}] {r.get('columna', '?')}: "
+                f"{r.get('problema', '')} → {r.get('sugerencia', '')}"
+            )
+        cleaning_block = "\n".join(cleaning_lines) if cleaning_lines else "(sin problemas reportados)"
+
+        ctx_block = ""
+        if context_text:
+            ctx_block = "\nContexto adicional aportado por el usuario:\n" + context_text[:2000]
+
+        ds_block = ""
+        if dataset_name:
+            ds_block = f"\nNombre del fichero: {dataset_name}"
+
+        return (
+            "Eres un analista de datos profesional escribiendo una MEMORIA de análisis "
+            "para un cliente real. Te basas EXCLUSIVAMENTE en los hechos que te paso a "
+            "continuación; NO inventas cifras ni hallazgos que no estén en los datos.\n\n"
+
+            "ESTILO OBLIGATORIO:\n"
+            "- Escribe en ESPAÑOL de España.\n"
+            "- Usa primera persona del plural ('hemos analizado', 'se observa', 'podemos ver').\n"
+            "- Tono profesional pero natural y humano. NADA de tono robótico ni frases "
+            "tipo 'En este informe se procederá a...'.\n"
+            "- Párrafos largos y bien hilados. NADA de listas con bullets ni de "
+            "encabezados internos. Solo prosa.\n"
+            "- NUNCA menciones que eres una IA, un modelo de lenguaje, ChatGPT, GPT, "
+            "Claude, Qwen ni ningún sistema automático. NUNCA digas que el texto fue "
+            "generado o asistido por IA.\n"
+            "- NUNCA digas 'como analista de datos' ni 'en este informe explicaremos'. "
+            "Ve directo al grano.\n"
+            "- Evita muletillas tipo 'cabe destacar', 'es importante señalar', 'en "
+            "primer lugar', 'en conclusión'. Usa conectores variados.\n"
+            "- Si un dato no está en lo que te paso, no lo inventes: omítelo.\n\n"
+
+            f"DATASET:{ds_block}\n"
+            f"Tiene {profile.get('rows', 0)} filas y {profile.get('cols', 0)} columnas.\n"
+            f"Columnas:\n{cols_block}\n"
+            f"{ctx_block}\n\n"
+
+            "GRAFICOS QUE SE INCLUYEN EN EL INFORME (cada uno con su descripcion y "
+            "observaciones; usalos para articular el analisis exploratorio):\n"
+            f"{charts_block}\n\n"
+
+            "PROBLEMAS DE CALIDAD DE DATOS DETECTADOS:\n"
+            f"{cleaning_block}\n\n"
+
+            "Genera el JSON con estos campos (cada uno son párrafos en prosa pura):\n"
+            "- title_suggestion: titulo del informe en una sola línea (ej. 'Analisis del "
+            "dataset de ...'). MAX 12 palabras.\n"
+            "- abstract: resumen del análisis en 4-6 frases. Menciona el tamaño del "
+            "dataset, qué se ha analizado y los hallazgos principales.\n"
+            "- introduction: 2 párrafos contextualizando los datos: qué representan, "
+            "qué objetivo tiene el análisis, qué se va a ver en el informe.\n"
+            "- intro_eda: 1 párrafo introduciendo la sección de análisis exploratorio "
+            "(qué tipo de visualizaciones se van a comentar).\n"
+            "- cleaning_section: 2 párrafos sobre la calidad de los datos, problemas "
+            "detectados y recomendaciones de limpieza.\n"
+            "- conclusions: 3-4 párrafos cerrando el análisis. Incluye insights "
+            "de negocio/decisión (qué se podría hacer con esto), limitaciones del "
+            "análisis y posibles siguientes pasos.\n\n"
+
+            "Responde EXCLUSIVAMENTE con JSON válido, sin texto adicional fuera del "
+            "JSON. Ejemplo de estructura:\n"
+            '{"title_suggestion":"...","abstract":"...","introduction":"...",'
+            '"intro_eda":"...","cleaning_section":"...","conclusions":"..."}'
         )
 
     def explain_chart(self, chart_def: dict, profile: dict, context_text: str = "", request_id: str = ""):

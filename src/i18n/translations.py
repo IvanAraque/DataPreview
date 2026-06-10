@@ -35,9 +35,9 @@ _TRANSLATIONS: Dict[str, Dict[str, str]] = {
 }
 
 def tr(key: str) -> str:
-    """Returns the translation for the given key based on current language setting."""
+    """Devuelve la traducción de la clave según el idioma activo."""
     lang = settings.get("language")
     if lang not in _TRANSLATIONS:
-        lang = "es" # default
+        lang = "es" # por defecto
     
     return _TRANSLATIONS[lang].get(key, key)

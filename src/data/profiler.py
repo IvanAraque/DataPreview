@@ -2,7 +2,7 @@ import polars as pl
 from typing import Dict, Any
 
 def profile_dataset(df: pl.DataFrame) -> Dict[str, Any]:
-    """Profiles the dataframe and returns metadata for the Context tab."""
+    """Perfila el dataframe y devuelve metadatos para la pestaña Contexto."""
     if df.is_empty():
         return {}
         
@@ -11,8 +11,7 @@ def profile_dataset(df: pl.DataFrame) -> Dict[str, Any]:
     memory_mb = df.estimated_size() / (1024 * 1024)
     
     columns_info = []
-    
-    # We can do some aggregations faster together, but for MVP loop is okay
+
     for col in df.columns:
         series = df[col]
         dtype = str(series.dtype)
@@ -37,7 +36,7 @@ def profile_dataset(df: pl.DataFrame) -> Dict[str, Any]:
                 info["min"] = str(series.min())
                 info["max"] = str(series.max())
         except Exception:
-            pass # ignore if a calculation fails
+            pass # ignorar si falla algún cálculo
 
         # Capturar hasta 5 valores no-nulos para que la IA pueda deducir formatos
         try:

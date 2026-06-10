@@ -6,7 +6,7 @@ from typing import Dict, Any
 
 def create_chart_widget(df: pl.DataFrame, chart_def: Dict[str, Any]) -> QWidget:
     container = QWidget()
-    # Add a nice border and white/dark background matching the theme
+    # Borde redondeado y fondo transparente acorde al tema
     container.setObjectName("chartContainer")
     container.setStyleSheet("""
         QWidget#chartContainer {
@@ -23,7 +23,7 @@ def create_chart_widget(df: pl.DataFrame, chart_def: Dict[str, Any]) -> QWidget:
     x_col = chart_def["x"]
     y_col = chart_def.get("y")
     
-    # Title Label (cleaner than pg.PlotWidget title)
+    # Etiqueta de título (más limpia que el título de pg.PlotWidget)
     title_text = f"{ctype.capitalize()}: {x_col}" + (f" vs {y_col}" if y_col and y_col not in ("count", "frequency") else "")
     title_lbl = QLabel(f"<b>{title_text}</b>")
     title_lbl.setStyleSheet("border: none; font-size: 13px; color: #6B7280;")
@@ -32,18 +32,17 @@ def create_chart_widget(df: pl.DataFrame, chart_def: Dict[str, Any]) -> QWidget:
     plot_widget = pg.PlotWidget()
     plot_widget.setBackground('transparent')
     
-    # Clean up axes
+    # Limpiar ejes
     plot_widget.getAxis('left').setPen(pg.mkPen(color='#D1D5DB', width=1))
     plot_widget.getAxis('bottom').setPen(pg.mkPen(color='#D1D5DB', width=1))
     plot_widget.getAxis('left').setTextPen(pg.mkPen(color='#6B7280'))
     plot_widget.getAxis('bottom').setTextPen(pg.mkPen(color='#6B7280'))
     plot_widget.showGrid(x=False, y=True, alpha=0.2)
-    
-    # Colors
+
     accent_color = '#4F46E5'
     
     try:
-        # Pre-clean data for NaNs and Infs to prevent PyQtGraph C++ segfaults
+        # Limpiar NaN e Inf antes de pintar para evitar segfaults en C++ de PyQtGraph
         clean_df = df
         for col in [x_col, y_col]:
             if col and col in df.columns and df[col].dtype in pl.NUMERIC_DTYPES:
@@ -62,7 +61,7 @@ def create_chart_widget(df: pl.DataFrame, chart_def: Dict[str, Any]) -> QWidget:
                 counts = counts.sort("count", descending=True).head(8)
                 
             raw_labels = counts[x_col].cast(pl.Utf8).fill_null("N/A").to_list()
-            # Truncate long labels so they don't overlap
+            # Acortar etiquetas largas para que no se solapen
             x_labels = [s[:10] + ".." if len(s) > 10 else s for s in raw_labels]
             y_vals = counts["count"].to_numpy()
             x_pos = np.arange(len(x_labels))

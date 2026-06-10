@@ -72,8 +72,7 @@ class AdvancedTab(QWidget):
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
-        
-        # Controls sidebar
+
         self.controls_widget = QWidget()
         self.controls_widget.setFixedWidth(260)
         self.controls_widget.setObjectName("sidebar")
@@ -125,8 +124,7 @@ class AdvancedTab(QWidget):
         self.controls_layout.addWidget(self.render_btn)
         
         self.layout.addWidget(self.controls_widget)
-        
-        # Plot area
+
         self.plot_area = QWidget()
         self.plot_layout = QVBoxLayout(self.plot_area)
         self.plot_layout.setContentsMargins(0, 0, 0, 0)
@@ -221,7 +219,7 @@ class AdvancedTab(QWidget):
         self._plot_error.connect(self._on_plot_error, Qt.QueuedConnection)
 
     def _on_type_changed(self, text):
-        # Disable Y axis for Histograma or Heatmap if needed
+        # Desactivar el eje Y para Histograma o Heatmap si hace falta
         if text in ["Histograma", "Barras"]:
             self.y_combo.setEnabled(False)
         else:
@@ -234,7 +232,7 @@ class AdvancedTab(QWidget):
 
         cols = df.columns
 
-        # block signals to avoid rendering while populating
+        # bloquear señales para no renderizar mientras se rellena
         self.x_combo.blockSignals(True)
         self.y_combo.blockSignals(True)
 

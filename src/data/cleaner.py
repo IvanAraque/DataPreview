@@ -2,7 +2,7 @@ import polars as pl
 from typing import List, Dict, Any
 
 def generate_recommendations(df: pl.DataFrame) -> List[Dict[str, str]]:
-    """Generates a list of data cleaning recommendations based on heuristics."""
+    """Genera una lista de recomendaciones de limpieza basadas en heurísticas."""
     recs = []
     
     if df.is_empty():
@@ -14,7 +14,7 @@ def generate_recommendations(df: pl.DataFrame) -> List[Dict[str, str]]:
         series = df[col]
         dtype = series.dtype
         
-        # 1. Nulls check
+        # 1. Comprobación de nulos
         null_count = series.null_count()
         if null_count > 0:
             pct = (null_count / num_rows) * 100
@@ -33,10 +33,9 @@ def generate_recommendations(df: pl.DataFrame) -> List[Dict[str, str]]:
                     "sugerencia": "Imputar valores o eliminar filas"
                 })
                 
-        # 2. Outliers (IQR) for numerics
+        # 2. Outliers (IQR) en numéricas
         if dtype in pl.NUMERIC_DTYPES:
             try:
-                # Use approximate quantiles if available or standard ones
                 q1 = series.quantile(0.25)
                 q3 = series.quantile(0.75)
                 if q1 is not None and q3 is not None:
@@ -56,12 +55,12 @@ def generate_recommendations(df: pl.DataFrame) -> List[Dict[str, str]]:
             except Exception:
                 pass
                 
-        # 3. Categorical text checks
+        # 3. Comprobaciones de texto categórico
         if dtype in (pl.Utf8, pl.String):
             try:
                 unique_pct = series.n_unique() / num_rows
                 
-                # Check for emails and URLs on a sample to avoid memory crashes on massive datasets
+                # Comprobar emails y URLs sobre una muestra para no agotar memoria en datasets enormes
                 sample = series.drop_nulls().head(20000)
                 sample_rows = sample.len()
                 

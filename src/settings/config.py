@@ -4,13 +4,13 @@ from pathlib import Path
 from typing import Any, Dict
 
 class SettingsManager:
-    """Manages application settings stored in a JSON file."""
+    """Gestiona la configuración de la app guardada en un archivo JSON."""
     
     def __init__(self):
-        # Determine the AppData directory based on OS
+        # Directorio AppData según el SO
         appdata_dir = os.environ.get("APPDATA")
         if not appdata_dir:
-            # Fallback to local home if APPDATA is not available
+            # Fallback al home local si APPDATA no está disponible
             appdata_dir = str(Path.home() / ".config")
             
         self.config_dir = Path(appdata_dir) / "DataPreview"
@@ -24,14 +24,14 @@ class SettingsManager:
         self._settings = self._load_settings()
 
     def _load_settings(self) -> Dict[str, Any]:
-        """Loads settings from the JSON file or returns defaults if it doesn't exist."""
+        """Carga la configuración del JSON o devuelve los valores por defecto si no existe."""
         if not self.config_file.exists():
             return self._default_settings.copy()
             
         try:
             with open(self.config_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # Merge with defaults in case of missing keys
+                # Combinar con los valores por defecto por si faltan claves
                 settings = self._default_settings.copy()
                 settings.update(data)
                 return settings
@@ -39,13 +39,13 @@ class SettingsManager:
             return self._default_settings.copy()
 
     def _save_settings(self) -> None:
-        """Saves current settings to the JSON file."""
+        """Guarda la configuración actual en el archivo JSON."""
         try:
             self.config_dir.mkdir(parents=True, exist_ok=True)
             with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(self._settings, f, indent=4)
         except Exception as e:
-            # logs will be handled elsewhere, but settings save shouldn't crash app
+            # los logs se gestionan en otro sitio; guardar settings no debe tirar la app
             pass
 
     def get(self, key: str) -> Any:
@@ -55,5 +55,5 @@ class SettingsManager:
         self._settings[key] = value
         self._save_settings()
 
-# Global instance for easy access
+# Instancia global
 settings = SettingsManager()
