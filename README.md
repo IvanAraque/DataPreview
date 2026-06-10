@@ -1,6 +1,9 @@
 # DataPreview
 
 Aplicación de escritorio en Python (PySide6) para hacer análisis exploratorio (EDA) de un dataset local — CSV, XLSX, JSON o Parquet — sin tener que escribir código. Combina recomendaciones automáticas de gráficos, un constructor manual de visualizaciones y un asistente de IA opcional que corre en tu propia máquina.
+<p align="center">
+<img src="docs/img/preview.png" alt="Pestaña Preview con gráficos recomendados" width="1000">
+</p>
 
 ## Qué hace
 
@@ -12,6 +15,26 @@ Aplicación de escritorio en Python (PySide6) para hacer análisis exploratorio 
 - **Asistente IA**: chat conversacional sobre el dataset, con respuestas formateadas. Reporte inicial automático tras cargar los datos.
 
 Todo lo de IA es **opcional**. Sin Ollama corriendo, la app sigue funcionando con heurísticas y simplemente oculta la pestaña Asistente IA.
+
+
+## Capturas
+
+**Contexto** — resumen del dataset y estadísticas por columna:
+
+<img src="docs/img/contexto.png" alt="Pestaña Contexto" width="600">
+
+**Limpieza** — problemas detectados por heurísticas y por la IA:
+
+<img src="docs/img/limpieza.png" alt="Pestaña Limpieza" width="600">
+
+**Asistente IA** — chat sobre los datos, corriendo en local:
+
+<img src="docs/img/asistente.png" alt="Asistente IA" width="600">
+
+**Informe** — exportación del análisis a HTML:
+
+<img src="docs/img/informe.png" alt="Informe generado" width="600">
+
 
 ## Instalación rápida
 
@@ -33,11 +56,13 @@ Toda la inferencia ocurre en local — nada sale a internet.
 
 Guía paso a paso, incluyendo cómo cambiar de modelo o generar un `.exe`: [`docs/INSTALL.md`](docs/INSTALL.md).
 
+
 ## Arquitectura
 
 Si quieres entender cómo está estructurado el código (flujo de carga, integración con Ollama, threading, manejo de errores): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 Historial de versiones: [`docs/VERSION.md`](docs/VERSION.md).
+
 
 ## Stack
 
@@ -46,6 +71,7 @@ Historial de versiones: [`docs/VERSION.md`](docs/VERSION.md).
 - **Gráficos**: pyqtgraph (rápido, para Preview) + plotly (interactivo, para Custom)
 - **IA local**: cliente HTTP propio contra Ollama (`/api/chat`)
 - **Iconos**: qtawesome (FontAwesome)
+
 
 ## Licencia
 
