@@ -491,6 +491,14 @@ class MainWindow(QMainWindow):
         # encontrar el panel destruido, pero limpiar evita el leak).
         self._explain_routes = {}
 
+        # Descartar trabajos de IA pendientes de un dataset anterior: que la
+        # cola no pierda tiempo en peticiones cuyo resultado ya nadie quiere.
+        if self.ai_available:
+            try:
+                self.ai_analyzer.cancel_pending()
+            except Exception:
+                pass
+
         # Pestañas ligeras
         try:
             self.context_tab.update_profile(profile, context_text=self._read_context_text())
@@ -544,9 +552,11 @@ class MainWindow(QMainWindow):
                 self._ai_charts_received = True
                 QTimer.singleShot(20, self._render_preview_charts)
 
-            # Watchdog: si la IA tarda más de 5 minutos en devolver las
-            # recomendaciones de gráficos, caemos a la heurística.
-            QTimer.singleShot(300000, self._chart_recommendations_timeout)
+            # Watchdog: si la IA tarda más de 4 minutos en devolver las
+            # recomendaciones de gráficos, caemos a la heurística. (Con la
+            # cola serializada y el thinking desactivado debería llegar en
+            # bastante menos; esto es solo la red de seguridad.)
+            QTimer.singleShot(240000, self._chart_recommendations_timeout)
         else:
             # Sin IA: render automático con la heurística inmediato
             QTimer.singleShot(50, self._render_preview_charts)
@@ -612,10 +622,23 @@ class MainWindow(QMainWindow):
                 self._pending_profile,
                 self._read_context_text(),
                 request_id=req_id,
+                chart_stats=self._compute_chart_stats(panel.current_spec()),
             )
         except Exception:
             import traceback
             traceback.print_exc()
+
+    def _compute_chart_stats(self, spec: dict) -> dict:
+        """Estadísticas reales del gráfico (correlación, top categorías...)
+        para que las observaciones de la IA citen cifras de verdad."""
+        try:
+            from data.profiler import compute_chart_stats
+            df = getattr(self, "_current_df", None)
+            if df is not None and spec:
+                return compute_chart_stats(df, spec)
+        except Exception:
+            pass
+        return {}
 
     def _on_ai_charts_recommended(self, specs: list):
         if self._ai_charts_received:
@@ -654,6 +677,7 @@ class MainWindow(QMainWindow):
                 self._pending_profile,
                 self._read_context_text(),
                 request_id="custom",
+                chart_stats=self._compute_chart_stats(chart_def),
             )
         except Exception:
             import traceback
@@ -900,10 +924,21 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, tr("error"), error_msg)
         
     def _on_close_file(self):
+        # Descartar trabajos de IA pendientes del archivo que se cierra
+        if self.ai_available:
+            try:
+                self.ai_analyzer.cancel_pending()
+            except Exception:
+                pass
+        # Ignorar respuestas tardías de la petición que pudiera estar en
+        # vuelo (no se puede abortar) y soltar el dataframe.
+        self._ai_charts_received = True
+        self._explain_routes = {}
+        self._current_df = None
         # Reiniciar la vista
         self.sidebar_container.hide()
         self.close_file_btn.hide()
         self.report_btn.hide()
         self.file_label.setText("")
         self.home_view.reset()
-        se
+        self.content_stack.setCurrentWidget(self.home_view)

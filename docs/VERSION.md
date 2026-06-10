@@ -4,6 +4,20 @@ Changelog de DataPreview. (Lo más reciente arriba).
 
 ---
 
+## [0.2.1] - 2026-06-10
+
+### Cambiado
+- Las peticiones a la IA ahora van en cola con un único worker (prioridad: gráficos > limpieza > explicaciones). Antes se lanzaban ~8 a la vez contra Ollama, que las procesa de una en una, y eso causaba timeouts y esperas de varios minutos en el Preview.
+- Desactivado el razonamiento interno (thinking) de qwen3 en las peticiones JSON: para devolver un JSON estructurado no aporta y multiplicaba la latencia de cada respuesta.
+- Las explicaciones de gráficos incluyen estadísticas reales del dataset (correlación, top categorías, outliers, tendencia), así que las observaciones son más concretas.
+- Las recomendaciones de gráficos usan correlaciones reales calculadas sobre los datos, además de reglas de diversidad: una misma columna aparece como máximo 2 veces entre los 6 principales.
+- El modelo se mantiene cargado 30 minutos para evitar arranques en frío.
+- Al cargar o cerrar un dataset se descartan las peticiones de IA pendientes del anterior.
+
+### Contexto
+Con la IA activa, el Preview podía tardar más de 10 minutos en completar las explicaciones; el cuello de botella no era el modelo sino lanzar todas las peticiones a la vez.
+
+
 ## [0.2] - 2026-06-10
 
 ### Añadido
